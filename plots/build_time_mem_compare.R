@@ -129,28 +129,6 @@ graph_colors <- c(
 df_res$Chromosome <- factor(df_res$Chromosome, levels = chrom_order)
 df_res$graph <- factor(df_res$graph, levels = c("V1.1", "V2"))
 
-ggplot(df_res, aes(x = Chromosome, y = Max_Memory_GB, fill = graph)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.7, colour = "black") +
-  scale_fill_manual(
-    name = "Graph",
-    values = c("V1.1" = "#1f77b4",  # blue
-               "V2"   = "#ff7f0e")  # orange
-  ) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
-  labs(
-    title = "Max RSS Memory Usage per Chromosome",
-    x = "Chromosome",
-    y = "Max Memory (GB)"
-  ) +
-  coord_flip() +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.text.y = element_text(size = 11),
-    axis.text.x = element_text(size = 11),
-    legend.position = "top",
-    plot.title = element_text(face = "bold", size = 16)
-  )
-
 df_res %>%
   group_by(graph) %>%
   summarise(
@@ -193,6 +171,32 @@ df_all_mem_avg <- df_all %>%
 # Shared position so bars for V1.1 and V2 align; Old shown wide and faded behind New
 pos <- position_dodge(width = 0.8)
 
+# Shared memory limit across both plots so axes match after coord_flip
+max_mem <- max(df_res$Max_Memory_GB, df_all_mem_avg$Max_Memory_GB, na.rm = TRUE)
+
+# Plot 1: Max RSS Memory Usage per Chromosome (New dataset)
+ggplot(df_res, aes(x = Chromosome, y = Max_Memory_GB, fill = graph)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7, colour = "black") +
+  scale_fill_manual(
+    name = "Graph",
+    values = c("V1.1" = "#1f77b4",  # blue
+               "V2"   = "#ff7f0e")  # orange
+  ) +
+  scale_y_continuous(limits = c(0, max_mem), expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title = "Max RSS Memory Usage per Chromosome",
+    x = "Chromosome",
+    y = "Max Memory (GB)"
+  ) +
+  coord_flip() +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.y = element_text(size = 11),
+    axis.text.x = element_text(size = 11),
+    legend.position = "top",
+    plot.title = element_text(face = "bold", size = 16)
+  )
+
 ggplot(df_all_mem_avg, aes(x = Chromosome, y = Max_Memory_GB, fill = graph)) +
   geom_col(
     data = subset(df_all_mem_avg, dataset == "Old"),
@@ -211,9 +215,37 @@ ggplot(df_all_mem_avg, aes(x = Chromosome, y = Max_Memory_GB, fill = graph)) +
   scale_fill_manual(values = c("V1.1" = "#1f77b4", "V2" = "#ff7f0e"), name = "Graph") +
   scale_alpha_manual(values = c("Old" = 0.35, "New" = 1.0), name = "Dataset",
                      labels = c("Old" = "Old (paper_output)", "New" = "New (kmer_extension_08-25)")) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous(limits = c(0, max_mem), expand = expansion(mult = c(0, 0.05))) +
   labs(
     title = "Max RSS Memory per Chromosome: Old (faded) vs New (solid)",
+    x = "Chromosome",
+    y = "Max Memory (GB)"
+  ) +
+  coord_flip() +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.y = element_text(size = 11),
+    axis.text.x = element_text(size = 11),
+    legend.position = "top",
+    plot.title = element_text(face = "bold", size = 16)
+  )
+
+# Third plot: Paper (Old) memory usage only, with the same axis limits
+df_old_mem_avg <- df_old %>%
+  select(Chromosome, graph, Max_Memory_GB) %>%
+  group_by(Chromosome, graph) %>%
+  summarise(Max_Memory_GB = mean(Max_Memory_GB, na.rm = TRUE), .groups = "drop") %>%
+  mutate(
+    Chromosome = factor(Chromosome, levels = chrom_order),
+    graph = factor(graph, levels = c("V1.1", "V2"))
+  )
+
+ggplot(df_old_mem_avg, aes(x = Chromosome, y = Max_Memory_GB, fill = graph)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7, colour = "black") +
+  scale_fill_manual(values = c("V1.1" = "#1f77b4", "V2" = "#ff7f0e"), name = "Graph") +
+  scale_y_continuous(limits = c(0, max_mem), expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title = "Max RSS Memory per Chromosome: Paper (Old) Only",
     x = "Chromosome",
     y = "Max Memory (GB)"
   ) +
